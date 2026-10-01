@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Metodologia do Spread</title>
+<style>
+:root {
+  color-scheme: light;
+  --fundo: #e9e8e4; --slide: #fcfcfb; --texto: #0b0b0b; --sec: #52514e; --suave: #898781;
+  --borda: rgba(11,11,11,0.10); --grade: #e1e0d9; --eixo: #c3c2b7; --painel: #f3f2ee;
+  --azul: #2a78d6; --azul-claro: #cde2fb; --laranja: #eb6834;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --fundo: #0d0d0d; --slide: #1a1a19; --texto: #ffffff; --sec: #c3c2b7; --suave: #898781;
+    --borda: rgba(255,255,255,0.10); --grade: #2c2c2a; --eixo: #383835; --painel: #222220;
+    --azul: #3987e5; --azul-claro: #184f95; --laranja: #d95926;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --fundo: #0d0d0d; --slide: #1a1a19; --texto: #ffffff; --sec: #c3c2b7; --suave: #898781;
+  --borda: rgba(255,255,255,0.10); --grade: #2c2c2a; --eixo: #383835; --painel: #222220;
+  --azul: #3987e5; --azul-claro: #184f95; --laranja: #d95926;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--fundo); color: var(--texto); overflow: hidden;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+
+/* Cada slide tem 1280x720 e é escalado para caber na janela */
+#palco { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+.slide { position: absolute; width: 1280px; height: 720px; background: var(--slide);
+  border-radius: 14px; box-shadow: 0 8px 40px rgba(0,0,0,0.12); padding: 64px 80px 56px;
+  display: none; flex-direction: column; transform-origin: center center; }
+.slide.ativo { display: flex; }
+
+.secao { font-size: 15px; font-weight: 600; color: var(--azul); letter-spacing: .04em; text-transform: uppercase; margin: 0 0 10px; }
+h1 { font-size: 54px; line-height: 1.1; margin: 0 0 20px; letter-spacing: -0.01em; }
+h2 { font-size: 38px; line-height: 1.15; margin: 0 0 28px; letter-spacing: -0.01em; }
+h3 { font-size: 20px; margin: 0 0 8px; }
+p, li { font-size: 21px; line-height: 1.5; color: var(--sec); }
+p { margin: 0 0 14px; }
+ul { margin: 0; padding-left: 26px; } li { margin-bottom: 10px; }
+strong { color: var(--texto); }
+code { font-family: ui-monospace, Consolas, monospace; font-size: .9em; background: var(--painel); padding: 1px 6px; border-radius: 4px; color: var(--texto); }
+.rodape { position: absolute; left: 80px; right: 80px; bottom: 26px; display: flex; justify-content: space-between;
+  font-size: 13px; color: var(--suave); }
+
+.grade-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.grade-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+.cartao { background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 22px 24px; }
+.cartao p, .cartao li { font-size: 18px; }
+.cartao .num { font-size: 15px; font-weight: 700; color: var(--azul); margin-bottom: 6px; }
+
+/* Capa */
+.capa { justify-content: center; }
+.capa .sub { font-size: 24px; color: var(--sec); max-width: 900px; }
+.capa .meta { margin-top: 40px; display: flex; gap: 40px; font-size: 17px; color: var(--suave); }
+.capa .meta strong { display: block; font-size: 26px; color: var(--texto); }
+
+/* Fluxo de extração */
+.fluxo { display: flex; align-items: stretch; gap: 0; margin-top: 6px; }
+.etapa { flex: 1; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 18px 18px; }
+.etapa .fonte { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 8px; }
+.etapa .fonte.anbima { color: var(--azul); } .etapa .fonte.quantum { color: var(--laranja); }
+.etapa h3 { font-size: 19px; }
+.etapa p { font-size: 16px; margin: 0; line-height: 1.45; }
+.etapa .qtd { font-size: 28px; font-weight: 700; color: var(--texto); margin-top: 10px; }
+.etapa .qtd span { font-size: 14px; font-weight: 400; color: var(--suave); }
+.seta { width: 34px; display: flex; align-items: center; justify-content: center; color: var(--suave); font-size: 24px; flex: none; }
+.nota { font-size: 16px; color: var(--suave); margin-top: 22px; }
+
+/* Funil */
+.funil { display: flex; flex-direction: column; gap: 10px; }
+.funil .linha { display: grid; grid-template-columns: 250px 1fr 84px; align-items: center; gap: 14px; }
+.funil .rotulo { font-size: 18px; color: var(--sec); }
+.funil .barra { height: 30px; background: var(--azul); border-radius: 0 4px 4px 0; }
+.funil .barra.fora { background: var(--eixo); }
+.funil .valor { font-size: 20px; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.funil .sep { height: 1px; background: var(--grade); margin: 8px 0; }
+
+/* Tabela de parâmetros */
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--grade); font-size: 17px; vertical-align: top; }
+th { color: var(--suave); font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }
+td:first-child { color: var(--texto); font-weight: 600; width: 270px; }
+td { color: var(--sec); }
+table.faixas td:first-child { width: auto; }
+table.faixas td { white-space: nowrap; }
+
+/* Fórmula */
+.formula { background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 26px 30px;
+  font-size: 28px; text-align: center; color: var(--texto); margin-bottom: 26px; }
+.formula .var { color: var(--azul); font-weight: 600; }
+
+.exemplo td:first-child { width: auto; font-weight: 400; color: var(--sec); }
+.exemplo td:last-child { text-align: right; color: var(--texto); font-variant-numeric: tabular-nums; font-weight: 600; }
+.exemplo tr.total td { border-bottom: none; font-size: 20px; }
+
+/* Gráfico da curva */
+#curva text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+
+/* Navegação */
+#nav { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px;
+  background: var(--slide); border: 1px solid var(--borda); border-radius: 999px; padding: 6px 10px; font-size: 14px; color: var(--sec); z-index: 5; }
+#nav button { background: none; border: none; color: var(--texto); font-size: 18px; cursor: pointer; padding: 4px 10px; border-radius: 999px; }
+#nav button:hover { background: var(--painel); }
+#nav button:focus-visible { outline: 2px solid var(--azul); }
+#contador { min-width: 56px; text-align: center; font-variant-numeric: tabular-nums; }
+
+/* Impressão: um slide por página (Ctrl+P -> Salvar como PDF) */
+@media print {
+  @page { size: 1280px 720px; margin: 0; }
+  html, body { height: auto; overflow: visible; background: #fff; }
+  #palco { position: static; display: block; }
+  .slide { display: flex !important; position: relative; transform: none !important; box-shadow: none; border-radius: 0;
+    page-break-after: always; break-after: page; }
+  #nav { display: none; }
+}
+</style>
+</head>
+<body>
+<div id="palco">
+
+<!-- 1. CAPA -->
+<section class="slide capa">
+  <div class="secao">Metodologia</div>
+  <h1>Spread de debêntures IPCA+<br>sobre NTN-B</h1>
+  <p class="sub">Casamento por duration, evolução histórica e dispersão por rating: como o prêmio de risco foi medido.</p>
+  <div class="meta">
+    <div><strong>02/01 a 25/09/2026</strong>período analisado</div>
+    <div><strong>541</strong>debêntures</div>
+    <div><strong>14</strong>NTN-Bs na curva</div>
+    <div><strong>94.089</strong>observações</div>
+  </div>
+</section>
+
+<!-- 2. OBJETIVO -->
+<section class="slide">
+  <div class="secao">Objetivo</div>
+  <h2>O que o prêmio de risco das debêntures IPCA+ tem a informar?</h2>
+  <p>O spread é a taxa que a debênture paga acima da NTN-B de mesmo prazo, ou seja, o prêmio exigido por não ser o Tesouro.</p>
+  <div class="grade-3" style="margin-top: 22px;">
+    <div class="cartao">
+      <div class="num">01</div>
+      <h3>Evolução histórica</h3>
+      <p>O prêmio abriu ou fechou ao longo de 2026? Em que momentos?</p>
+    </div>
+    <div class="cartao">
+      <div class="num">02</div>
+      <h3>Dispersão por rating</h3>
+      <p>O mercado cobra mais de quem tem nota pior? Quanto varia dentro de uma mesma faixa?</p>
+    </div>
+    <div class="cartao">
+      <div class="num">03</div>
+      <h3>Efeito tributário</h3>
+      <p>Quanto do spread é risco de crédito e quanto é isenção de IR (Lei 12.431)?</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3. FONTES -->
+<section class="slide">
+  <div class="secao">Fonte dos dados</div>
+  <h2>Duas fontes com papéis complementares</h2>
+  <div class="grade-2">
+    <div class="cartao">
+      <h3 style="color: var(--azul);">ANBIMA: define o universo</h3>
+      <ul>
+        <li>Preços dos últimos dias de <strong>debêntures</strong> e de <strong>títulos públicos federais</strong>.</li>
+        <li>Usada para selecionar <strong>quais papéis</strong> entram na análise.</li>
+        <li>Traz as características: emissor, remuneração, vencimento e enquadramento na Lei 12.431.</li>
+      </ul>
+    </div>
+    <div class="cartao">
+      <h3 style="color: var(--laranja);">Quantum Axis: fornece séries e ratings</h3>
+      <ul>
+        <li>Série diária de 2026 para cada papel selecionado.</li>
+        <li>Campos extraídos: <strong>taxa indicativa</strong>, <strong>duration</strong> e <strong>PU indicativo</strong>.</li>
+        <li>Mesma extração para debêntures e NTN-Bs, o que garante a mesma base de comparação.</li>
+        <li><strong>Ratings</strong> de Fitch, S&amp;P e Moody's para cada código CETIP.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 4. EXTRAÇÃO DEBÊNTURES -->
+<section class="slide">
+  <div class="secao">Extração · Debêntures</div>
+  <h2>Da lista da ANBIMA às séries diárias</h2>
+  <div class="fluxo">
+    <div class="etapa">
+      <div class="fonte anbima">ANBIMA</div>
+      <h3>Preços dos últimos dias</h3>
+      <p>Todas as debêntures precificadas de 21 a 25/09/2026.</p>
+      <div class="qtd">6.408 <span>registros</span></div>
+    </div>
+    <div class="seta" aria-hidden="true">→</div>
+    <div class="etapa">
+      <div class="fonte anbima">ANBIMA</div>
+      <h3>Dia mais recente</h3>
+      <p>Filtro na data de referência mais recente: 25/09/2026.</p>
+    </div>
+    <div class="seta" aria-hidden="true">→</div>
+    <div class="etapa">
+      <div class="fonte anbima">ANBIMA</div>
+      <h3>Indexador IPCA</h3>
+      <p>Somente debêntures com remuneração IPCA + spread.</p>
+      <div class="qtd">661 <span>debêntures</span></div>
+    </div>
+    <div class="seta" aria-hidden="true">→</div>
+    <div class="etapa">
+      <div class="fonte quantum">Quantum Axis</div>
+      <h3>Séries de 2026</h3>
+      <p>Taxa indicativa, duration e PU indicativo de cada dia útil.</p>
+      <div class="qtd">184 <span>datas</span></div>
+    </div>
+  </div>
+  <p class="nota">Partir da carteira atual da ANBIMA garante que a análise usa papéis em circulação e com características conhecidas.</p>
+</section>
+
+<!-- 5. EXTRAÇÃO NTN-B -->
+<section class="slide">
+  <div class="secao">Extração · NTN-B</div>
+  <h2>A mesma lógica para a curva de referência</h2>
+  <div class="fluxo">
+    <div class="etapa">
+      <div class="fonte anbima">ANBIMA</div>
+      <h3>Títulos públicos federais</h3>
+      <p>Preços dos últimos dias de LFT, LTN, NTN-F, NTN-B e NTN-C.</p>
+    </div>
+    <div class="seta" aria-hidden="true">→</div>
+    <div class="etapa">
+      <div class="fonte anbima">ANBIMA</div>
+      <h3>Somente NTN-B</h3>
+      <p>Título público indexado ao IPCA, comparável às debêntures IPCA+.</p>
+      <div class="qtd">14 <span>títulos</span></div>
+    </div>
+    <div class="seta" aria-hidden="true">→</div>
+    <div class="etapa">
+      <div class="fonte quantum">Quantum Axis</div>
+      <h3>Séries de 2026</h3>
+      <p>Taxa indicativa, duration e PU indicativo de cada dia útil.</p>
+      <div class="qtd">12–14 <span>títulos por dia</span></div>
+    </div>
+  </div>
+  <div class="grade-2" style="margin-top: 26px;">
+    <div class="cartao"><p style="margin:0;"><strong>Vencimentos de 2027 a 2060</strong>, com duration de 0,6 a 13,5 anos em 25/09/2026, o que cobre o prazo das debêntures.</p></div>
+    <div class="cartao"><p style="margin:0;"><strong>NTN-B 2031 e 2037</strong> só têm série a partir de 14/01/2026. Até lá, a curva tem 12 pontos.</p></div>
+  </div>
+</section>
+
+<!-- 6. FUNIL -->
+<section class="slide">
+  <div class="secao">Tratamento da base</div>
+  <h2>Quanto da amostra chega ao cálculo</h2>
+  <div class="grade-2" style="grid-template-columns: 1.6fr 1fr; gap: 44px;">
+    <div class="funil">
+      <div class="linha"><div class="rotulo">Debêntures IPCA na ANBIMA</div><div class="barra" style="width:100%"></div><div class="valor">661</div></div>
+      <div class="linha"><div class="rotulo">Com rating válido</div><div class="barra" style="width:83.2%"></div><div class="valor">550</div></div>
+      <div class="linha"><div class="rotulo">Com série e características</div><div class="barra" style="width:81.8%"></div><div class="valor">541</div></div>
+      <div class="sep"></div>
+      <div class="linha"><div class="rotulo">Observações (papel × data)</div><div class="barra" style="width:100%"></div><div class="valor">98.021</div></div>
+      <div class="linha"><div class="rotulo">Sem taxa ou duration</div><div class="barra fora" style="width:2.6%"></div><div class="valor">−2.506</div></div>
+      <div class="linha"><div class="rotulo">Duration fora da curva</div><div class="barra fora" style="width:1.5%"></div><div class="valor">−1.426</div></div>
+      <div class="linha"><div class="rotulo"><strong>Observações usadas</strong></div><div class="barra" style="width:96%"></div><div class="valor">94.089</div></div>
+    </div>
+    <div>
+      <ul>
+        <li>Só entram debêntures com <strong>rating válido</strong>, já que a dispersão por rating é um dos eixos da análise.</li>
+        <li>Cada observação é <strong>uma debênture em uma data</strong>; são 495 a 527 papéis por dia.</li>
+        <li>Papéis com duration abaixo da NTN-B mais curta ficam de fora: <strong>não há extrapolação</strong>.</li>
+        <li><strong>96%</strong> das observações chegam ao cálculo.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 7. RATING -->
+<section class="slide">
+  <div class="secao">Tratamento do rating</div>
+  <h2>Uma nota por debênture, agrupada em faixas</h2>
+  <div class="grade-2">
+    <div>
+      <ul>
+        <li>A base traz até duas notas por papel, no formato <code>AGÊNCIA | NOTA</code> (ex.: <code>FITCH | AA+</code>).</li>
+        <li>Usa-se o <strong>Rating 1</strong>; o Rating 2 entra só quando o primeiro é inválido (ex.: "Retirado").</li>
+        <li>As notas da Moody's já vêm na notação de S&amp;P e Fitch, então a escala é a mesma para as três agências.</li>
+        <li>Notas são ordenadas pelo risco (AAA &gt; AA+ &gt; … &gt; D), não em ordem alfabética.</li>
+      </ul>
+    </div>
+    <div class="cartao">
+      <h3>Faixas de rating</h3>
+      <table class="faixas">
+        <tr><th>Faixa</th><th>Notas</th><th>Grupo</th></tr>
+        <tr><td>AAA</td><td>AAA</td><td rowspan="4" style="vertical-align: middle;">Grau de<br>investimento</td></tr>
+        <tr><td>AA</td><td>AA+, AA, AA-</td></tr>
+        <tr><td>A</td><td>A+, A, A-</td></tr>
+        <tr><td>BBB</td><td>BBB+, BBB, BBB-</td></tr>
+        <tr><td>Especulativo</td><td>BB+ ou pior</td><td>Especulativo</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 8. CASAMENTO POR DURATION -->
+<section class="slide">
+  <div class="secao">Casamento por duration</div>
+  <h2>A NTN-B "equivalente" é interpolada na curva do dia</h2>
+  <div class="grade-2" style="grid-template-columns: 1.35fr 1fr; gap: 36px; align-items: start;">
+    <svg id="curva" viewBox="0 0 640 400" role="img" aria-label="Curva de NTN-B em 25/09/2026 com a debênture AESLA5 e a taxa interpolada"></svg>
+    <div>
+      <ul>
+        <li>Para cada data, a curva é formada pelas NTN-Bs daquele dia: duration (anos) × taxa indicativa.</li>
+        <li>A taxa da NTN-B na duration exata da debênture é obtida por <strong>interpolação linear</strong> entre os dois vértices vizinhos.</li>
+        <li>Duration da debênture convertida de <strong>dias úteis para anos</strong> (÷ 252), a mesma unidade da NTN-B.</li>
+        <li>Fora do intervalo da curva, não há extrapolação: o papel fica sem spread naquele dia.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 9. CÁLCULO DO SPREAD -->
+<section class="slide">
+  <div class="secao">Cálculo do spread</div>
+  <h2>Diferença entre as taxas, em basis points</h2>
+  <div class="formula">
+    <span class="var">Spread (bps)</span> = ( <span class="var">taxa da debênture</span> − <span class="var">taxa NTN-B interpolada</span> ) × 10.000
+  </div>
+  <div class="grade-2" style="gap: 36px;">
+    <div>
+      <ul>
+        <li>As taxas vêm em decimal (0,0761 = 7,61% a.a.), por isso o fator 10.000.</li>
+        <li>As duas taxas são <strong>reais</strong> (acima do IPCA), então a diferença isola o prêmio sem efeito de inflação.</li>
+        <li>Spread <strong>negativo</strong> = a debênture rende menos que o Tesouro de mesmo prazo, algo comum em papéis incentivados.</li>
+      </ul>
+    </div>
+    <div class="cartao">
+      <h3>Exemplo: AESLA5 em 25/09/2026</h3>
+      <table class="exemplo">
+        <tr><td>Duration</td><td>1.241 d.u. = 4,93 anos</td></tr>
+        <tr><td>Vértices vizinhos</td><td>NTN-B 2031 e 2032</td></tr>
+        <tr><td>Taxa da debênture</td><td>7,6082%</td></tr>
+        <tr><td>Taxa NTN-B interpolada</td><td>7,6595%</td></tr>
+        <tr class="total"><td>Spread</td><td>−5,1 bps</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 10. PARÂMETROS -->
+<section class="slide">
+  <div class="secao">Parâmetros</div>
+  <h2>Escolhas utilizadas no cálculo</h2>
+  <table>
+    <tr><th>Parâmetro</th><th>Valor utilizado</th></tr>
+    <tr><td>Período e frequência</td><td>02/01 a 25/09/2026, diário (184 datas)</td></tr>
+    <tr><td>Taxa utilizada</td><td>Taxa indicativa (Quantum Axis), para debêntures e NTN-Bs</td></tr>
+    <tr><td>Unidade da duration</td><td>Anos; debêntures convertidas de dias úteis com base 252</td></tr>
+    <tr><td>Interpolação</td><td>Linear entre vértices da curva do dia; durations repetidas usam a média das taxas</td></tr>
+    <tr><td>Extrapolação</td><td>Não utilizada</td></tr>
+    <tr><td>Duration mínima da NTN-B</td><td>Sem corte (parâmetro opcional, desligado)</td></tr>
+    <tr><td>Rating</td><td>Rating 1, com Rating 2 como alternativa; faixas AAA, AA, A, BBB e Especulativo</td></tr>
+    <tr><td>Estatística principal</td><td>Mediana, com P25 e P75 para a dispersão; média e desvio padrão como complemento</td></tr>
+    <tr><td>Segmentações</td><td>Faixa de rating, grau de investimento e Lei 12.431 (incentivada ou não)</td></tr>
+  </table>
+</section>
+
+<!-- 11. AGREGAÇÕES -->
+<section class="slide">
+  <div class="secao">Do spread individual às respostas</div>
+  <h2>Como os spreads são agregados</h2>
+  <div class="grade-3">
+    <div class="cartao">
+      <div class="num">01 · Evolução histórica</div>
+      <p>Mediana diária do spread das debêntures de <strong>grau de investimento</strong>, com a faixa P25–P75.</p>
+      <p style="margin:0;">Papéis especulativos ficam fora para não dominar a série.</p>
+    </div>
+    <div class="cartao">
+      <div class="num">02 · Dispersão por rating</div>
+      <p>Mediana diária <strong>por faixa</strong> e distribuição completa dos papéis em cada faixa na última data.</p>
+      <p style="margin:0;">Mostra a diferença entre faixas e dentro delas.</p>
+    </div>
+    <div class="cartao">
+      <div class="num">03 · Efeito tributário</div>
+      <p>Mediana diária de <strong>incentivadas</strong> contra <strong>não incentivadas</strong>, só com grau de investimento.</p>
+      <p style="margin:0;">Separa o que é isenção de IR do que é risco de crédito.</p>
+    </div>
+  </div>
+  <p class="nota">A mediana é a estatística principal porque a composição da amostra muda de um dia para o outro e há papéis com spreads extremos.</p>
+</section>
+
+<!-- 12. LIMITAÇÕES -->
+<section class="slide">
+  <div class="secao">Limitações</div>
+  <h2>Pontos a considerar na leitura dos resultados</h2>
+  <div class="grade-2" style="gap: 36px;">
+    <ul>
+      <li><strong>Rating estático:</strong> a nota atual é aplicada a todo o período, o que pode antecipar rebaixamentos ocorridos no ano.</li>
+      <li><strong>Janela curta:</strong> cerca de 9 meses, sem um ciclo completo de crédito.</li>
+      <li><strong>Amostras pequenas:</strong> 1 papel BBB e 16 não incentivadas.</li>
+    </ul>
+    <ul>
+      <li><strong>Tributação:</strong> incentivadas são isentas de IR e a NTN-B não, então o spread delas fica comprimido.</li>
+      <li><strong>Ponta curta da curva:</strong> a NTN-B mai/2027 tem taxa bem abaixo das demais e pode elevar o spread de papéis curtos.</li>
+      <li><strong>Taxa indicativa:</strong> é uma marcação de referência, não necessariamente o preço de negócio.</li>
+    </ul>
+  </div>
+</section>
+
+</div>
+
+<nav id="nav" aria-label="Navegação dos slides">
+  <button id="anterior" aria-label="Slide anterior">←</button>
+  <span id="contador"></span>
+  <button id="proximo" aria-label="Próximo slide">→</button>
+</nav>
+
+<script>
+// ------------------------------------------------------------
+// Gráfico da curva de NTN-B em 25/09/2026 (dados reais)
+// ------------------------------------------------------------
+const NTNB = [
+  [0.609, 5.4892, "2027"], [1.788, 7.3700, "2028"], [2.394, 7.4900, "2029"], [3.461, 7.6652, "2030"],
+  [3.972, 7.6461, "2031"], [4.950, 7.6598, "2032"], [5.368, 7.6401, "2033"], [6.575, 7.6000, "2035"],
+  [7.632, 7.5438, "2037"], [9.238, 7.3974, "2040"], [10.665, 7.3396, "2045"], [12.088, 7.2900, "2050"],
+  [12.672, 7.2260, "2055"], [13.474, 7.2100, "2060"]
+];
+const DEB = { duration: 4.926, taxa: 7.6082, ntnb: 7.6595, codigo: "AESLA5" };
+
+function desenharCurva() {
+  const svg = document.getElementById("curva");
+  const css = getComputedStyle(document.documentElement);
+  const cor = nome => css.getPropertyValue(nome).trim();
+  const m = { e: 56, d: 16, t: 20, b: 46 }, L = 640, A = 400;
+  const x0 = 0, x1 = 14, y0 = 5.2, y1 = 8.0;
+  const X = v => m.e + (v - x0) / (x1 - x0) * (L - m.e - m.d);
+  const Y = v => A - m.b - (v - y0) / (y1 - y0) * (A - m.t - m.b);
+  let s = "";
+
+  for (let v = 5.5; v <= 8.0; v += 0.5) {
+    s += `<line x1="${m.e}" x2="${L - m.d}" y1="${Y(v)}" y2="${Y(v)}" stroke="${cor("--grade")}" stroke-width="1"/>`;
+    s += `<text x="${m.e - 8}" y="${Y(v) + 4}" text-anchor="end" font-size="12" fill="${cor("--suave")}">${v.toFixed(1).replace(".", ",")}%</text>`;
+  }
+  for (let v = 0; v <= 14; v += 2) {
+    s += `<text x="${X(v)}" y="${A - m.b + 20}" text-anchor="middle" font-size="12" fill="${cor("--suave")}">${v}</text>`;
+  }
+  s += `<line x1="${m.e}" x2="${L - m.d}" y1="${A - m.b}" y2="${A - m.b}" stroke="${cor("--eixo")}" stroke-width="1"/>`;
+  s += `<text x="${(m.e + L - m.d) / 2}" y="${A - 6}" text-anchor="middle" font-size="13" fill="${cor("--sec")}">Duration (anos)</text>`;
+
+  // Curva interpolada e vértices
+  s += `<polyline fill="none" stroke="${cor("--azul")}" stroke-width="2" points="${NTNB.map(p => X(p[0]) + "," + Y(p[1])).join(" ")}"/>`;
+  NTNB.forEach(p => {
+    s += `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="4.5" fill="${cor("--azul")}" stroke="${cor("--slide")}" stroke-width="2"><title>NTN-B ${p[2]}: ${p[1].toFixed(2).replace(".", ",")}% (duration ${p[0].toFixed(2).replace(".", ",")})</title></circle>`;
+  });
+  s += `<text x="${X(0.609) + 10}" y="${Y(5.4892) + 4}" font-size="12" fill="${cor("--sec")}">NTN-B 2027</text>`;
+
+  // Debênture e ponto interpolado
+  const xd = X(DEB.duration);
+  s += `<line x1="${xd}" x2="${xd}" y1="${Y(y0)}" y2="${Y(DEB.ntnb)}" stroke="${cor("--eixo")}" stroke-width="1"/>`;
+  s += `<circle cx="${xd}" cy="${Y(DEB.ntnb)}" r="6" fill="${cor("--slide")}" stroke="${cor("--azul")}" stroke-width="2"><title>NTN-B interpolada: 7,6595%</title></circle>`;
+  s += `<circle cx="${xd}" cy="${Y(DEB.taxa)}" r="6" fill="${cor("--laranja")}" stroke="${cor("--slide")}" stroke-width="2"><title>${DEB.codigo}: 7,6082%</title></circle>`;
+  // Rótulos na área livre abaixo da curva, ligados aos pontos por linhas finas
+  const xr = X(6.6), yr1 = Y(6.75), yr2 = Y(6.45);
+  s += `<polyline fill="none" stroke="${cor("--eixo")}" stroke-width="1" points="${xd + 6},${Y(DEB.ntnb) + 4} ${xr - 6},${yr1 - 4}"/>`;
+  s += `<polyline fill="none" stroke="${cor("--eixo")}" stroke-width="1" points="${xd + 5},${Y(DEB.taxa) + 5} ${xr - 6},${yr2 - 4}"/>`;
+  s += `<text x="${xr}" y="${yr1}" font-size="14" fill="${cor("--texto")}">NTN-B interpolada: 7,6595%</text>`;
+  s += `<text x="${xr}" y="${yr2}" font-size="14" fill="${cor("--texto")}">${DEB.codigo}: 7,6082%</text>`;
+  s += `<text x="${xr}" y="${yr2 + 24}" font-size="14" font-weight="600" fill="${cor("--texto")}">Spread: −5,1 bps</text>`;
+  s += `<text x="${xd + 4}" y="${Y(y0) - 6}" font-size="12" fill="${cor("--suave")}">4,93 anos</text>`;
+
+  // Legenda (canto inferior direito, área sem dados)
+  const yl = Y(5.75), xl = X(8.6);
+  s += `<circle cx="${xl}" cy="${yl - 4}" r="5" fill="${cor("--azul")}"/><text x="${xl + 12}" y="${yl}" font-size="13" fill="${cor("--sec")}">NTN-Bs em 25/09/2026</text>`;
+  s += `<circle cx="${xl}" cy="${yl + 18}" r="5" fill="${cor("--laranja")}"/><text x="${xl + 12}" y="${yl + 22}" font-size="13" fill="${cor("--sec")}">Debênture</text>`;
+  svg.innerHTML = s;
+}
+
+// ------------------------------------------------------------
+// Navegação e escala dos slides
+// ------------------------------------------------------------
+const slides = [...document.querySelectorAll(".slide")];
+let atual = 0;
+
+slides.forEach((slide, i) => {
+  if (i === 0) return;
+  const rodape = document.createElement("div");
+  rodape.className = "rodape";
+  rodape.innerHTML = `<span>Spread de debêntures IPCA+ sobre NTN-B · Metodologia</span><span>${i + 1} / ${slides.length}</span>`;
+  slide.appendChild(rodape);
+});
+
+function escalar() {
+  const escala = Math.min(window.innerWidth / 1360, (window.innerHeight - 60) / 770);
+  slides.forEach(s => s.style.transform = `scale(${escala})`);
+}
+
+function mostrar(i) {
+  atual = Math.max(0, Math.min(slides.length - 1, i));
+  slides.forEach((s, k) => s.classList.toggle("ativo", k === atual));
+  document.getElementById("contador").textContent = `${atual + 1} / ${slides.length}`;
+  try { history.replaceState(null, "", "#" + (atual + 1)); } catch (e) {}
+}
+
+document.getElementById("anterior").onclick = () => mostrar(atual - 1);
+document.getElementById("proximo").onclick = () => mostrar(atual + 1);
+document.addEventListener("keydown", e => {
+  if (["ArrowRight", "PageDown", " "].includes(e.key)) { e.preventDefault(); mostrar(atual + 1); }
+  if (["ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); mostrar(atual - 1); }
+  if (e.key === "Home") mostrar(0);
+  if (e.key === "End") mostrar(slides.length - 1);
+});
+let toqueX = null;
+document.addEventListener("touchstart", e => { toqueX = e.touches[0].clientX; });
+document.addEventListener("touchend", e => {
+  if (toqueX === null) return;
+  const dx = e.changedTouches[0].clientX - toqueX;
+  if (Math.abs(dx) > 40) mostrar(atual + (dx < 0 ? 1 : -1));
+  toqueX = null;
+});
+
+window.addEventListener("resize", escalar);
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", desenharCurva);
+
+desenharCurva();
+escalar();
+mostrar(parseInt(location.hash.slice(1)) - 1 || 0);
+</script>
+</body>
+</html>
